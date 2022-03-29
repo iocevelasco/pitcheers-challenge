@@ -3,8 +3,9 @@ import { formatDate, handlerStatus, filterByLastMonth } from './helpers';
 import { Service } from './Service';
 function App() {
   const [tenants, setTenantsList] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowform] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
   const formRef = useRef(null);
   const [filters, setFilter] = useState({
     order: 'name',
@@ -65,10 +66,6 @@ function App() {
     })))
   }, [])
 
-  const onCancel = async (event) => {
-    setShowform(false)
-  }
-
   const onDeleteTenants = async (id) => {
     try {
       await Service.deleteTenant(id)
@@ -77,8 +74,6 @@ function App() {
       console.error('Error deleting', error)
     }
   }
-
-
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -89,11 +84,20 @@ function App() {
       leaseEndDate: formData.get('leaseEndDate'),
     };
 
+    for (let key in tenant) {
+      if (tenant[key] === '') return setMessage('Invalid form data')
+    }
+
     await Service.addTenant(tenant)
     setShowform(false)
+    setMessage('')
     getTenant()
   };
 
+  const onCancel = () => {
+    setShowform(false)
+    setMessage('')
+  }
   return (
     <>
       <div className="container">
@@ -182,6 +186,7 @@ function App() {
                 id="leaseEndDate"
                 className="form-control" />
             </div>
+            <p>{message}</p>
             <button
               type="submit"
               className="btn btn-primary">Save</button>
