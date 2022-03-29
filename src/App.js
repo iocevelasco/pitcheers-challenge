@@ -1,13 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { formatDate, handlerStatus } from './helpers';
 import { Service } from './Service';
-
 function App() {
   const [tenants, setTenantsList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilter] = useState({
+    order: 'name',
+    tabs: 'all',
+  });
   const getTenant = async () => {
     try {
+      setLoading(false)
       const data = await Service.getTenants()
       if (!Array.isArray(data)) setTenantsList([])
       setTenantsList(data);
+      setLoading(prevState => !prevState)
     } catch (error) {
       console.error('Error getting', error)
     }
@@ -16,6 +23,21 @@ function App() {
   useEffect(() => {
     getTenant()
   }, [])
+
+  const reOrderTable = useCallback((orderBy) => setFilter(prevState => ({
+    ...prevState,
+    order: orderBy,
+  })), [])
+
+
+  const tenantsList = useMemo(() => {
+    const tenantListFiltered = tenants.map(e => e).sort((a, b) => {
+      if (a[filters.order] < b[filters.order]) { return -1; }
+      if (a[filters.order] > b[filters.order]) { return 1; }
+      return 0;
+    })
+    return tenantListFiltered
+  }, [tenants, filters])
 
   return (
     <>
@@ -35,30 +57,41 @@ function App() {
         <table className="table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Payment Status</th>
-              <th>Lease End Date</th>
+              <th onClick={() => reOrderTable('id')}>#</th>
+              <th onClick={() => reOrderTable('name')} id='name'>Name</th>
+              <th onClick={() => reOrderTable('paymentStatus')} id='paymentStatus'>Payment Status</th>
+              <th onClick={() => reOrderTable('leaseEndDate')} id='leaseEndDate'>Lease End Date</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {
-              tenantsList.length ? tenantsList.map((tenant, index) => {
-                const status = handlerStatus(tenant.paymentStatus.toLowerCase())
-                return (
-                  <tr key={`tenant-key${index}`}>
-                    <th>{tenant.id}</th>
-                    <td>{tenant.name}</td>
-                    <td className={status}>{tenant.paymentStatus}</td>
-                    <td>{formatDate(tenant.leaseEndDate)}</td>
-                    <td>
-                      <button className="btn btn-danger" onClick={() => onDeleteTenants(tenant.id)}>Delete</button>
-                    </td>
+          {
+            loading ? <tbody>
+              {
+                tenantsList.length ? tenantsList.map((tenant, index) => {
+                  const status = handlerStatus(tenant.paymentStatus.toLowerCase())
+                  return (
+                    <tr datatest-id={`tenant-row${index}`} key={`tenant-key${index}`}>
+                      <th>{tenant.id}</th>
+                      <td>{tenant.name}</td>
+                      <td className={status}>{tenant.paymentStatus}</td>
+                      <td>{formatDate(tenant.leaseEndDate)}</td>
+                      <td>
+                        <button className="btn btn-danger" >Delete</button>
+                      </td>
+                    </tr>
+                  )
+                }) :
+                  <tr>
+                    <th>No result found</th>
                   </tr>
-                )
               }
-            </tbody>
+            </tbody> :
+              <tbody>
+                <tr>
+                  <th>Loading...</th>
+                </tr>
+              </tbody>
+          }
         </table>
       </div>
       <div className="container">
