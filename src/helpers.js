@@ -10,3 +10,9 @@ export const formatDate = function (timestamp) {
   return `${months[date.getMonth()]} / ${date.getDay()} / ${date.getFullYear()} | ${hours}`;
 };
 
+export const filterByLastMonth = (value) => {
+  const date = new Date(value);
+  const lastMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  return date <= lastMonth;
+}
+

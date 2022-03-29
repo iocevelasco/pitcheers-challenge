@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { formatDate, handlerStatus } from './helpers';
+import { formatDate, handlerStatus, filterByLastMonth } from './helpers';
 import { Service } from './Service';
 function App() {
   const [tenants, setTenantsList] = useState([]);
@@ -8,6 +8,11 @@ function App() {
     order: 'name',
     tabs: 'all',
   });
+  const [tabs, setTabs] = useState([
+    { label: 'All', active: true, value: 'all' },
+    { label: 'Payment is late', active: false, value: 'payment' },
+    { label: 'Lease ends in less than a month', active: false, value: 'date' },
+  ])
   const getTenant = async () => {
     try {
       setLoading(false)
@@ -29,30 +34,49 @@ function App() {
     order: orderBy,
   })), [])
 
+  const filterByTabs = (element, value) => {
+    const filter = {
+      all: element,
+      payment: element.paymentStatus.toLowerCase() === 'late',
+      date: filterByLastMonth(element.leaseEndDate)
+    }
+    return filter[value]
+  }
 
   const tenantsList = useMemo(() => {
     const tenantListFiltered = tenants.map(e => e).sort((a, b) => {
       if (a[filters.order] < b[filters.order]) { return -1; }
       if (a[filters.order] > b[filters.order]) { return 1; }
       return 0;
-    })
+    }).filter(element => filterByTabs(element, filters.tabs))
     return tenantListFiltered
   }, [tenants, filters])
+
+  const handlerTab = useCallback((tabsValue, index) => {
+    setFilter(prevState => ({
+      ...prevState,
+      tabs: tabsValue.value.toLowerCase(),
+    }))
+    setTabs(prevState => prevState.map((tab, i) => ({
+      ...tab,
+      active: i === index
+    })))
+  }, [])
 
   return (
     <>
       <div className="container">
         <h1>Tenants</h1>
         <ul className="nav nav-tabs">
-          <li className="nav-item">
-            <a className="nav-link active" href="#">All</a>
-          </li>
-          <li className="nav-item">
-            <a className="nav-link" href="#">Payment is late</a>
-          </li>
-          <li className="nav-item">
-            <a className="nav-link" href="#">Lease ends in less than a month</a>
-          </li>
+          {
+            tabs.map((tab, index) => {
+              return (
+                <li data-testid={`tab-${index}`} key={`tab-${index}`} onClick={() => handlerTab(tab, index)} className="nav-item">
+                  <a className={`nav-link  ${!tab.active ? 'active' : ''}`} href="/#">{tab.label}</a>
+                </li>
+              )
+            })
+          }
         </ul>
         <table className="table">
           <thead>
