@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { formatDate, handlerStatus, filterByLastMonth } from './helpers';
 import { Service } from './Service';
 function App() {
   const [tenants, setTenantsList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showForm, setShowform] = useState(false);
+  const formRef = useRef(null);
   const [filters, setFilter] = useState({
     order: 'name',
     tabs: 'all',
@@ -63,6 +65,35 @@ function App() {
     })))
   }, [])
 
+  const onCancel = async (event) => {
+    setShowform(false)
+  }
+
+  const onDeleteTenants = async (id) => {
+    try {
+      await Service.deleteTenant(id)
+      getTenant()
+    } catch (error) {
+      console.error('Error deleting', error)
+    }
+  }
+
+
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(formRef.current);
+    const tenant = {
+      name: formData.get('name'),
+      paymentStatus: formData.get('paymentStatus'),
+      leaseEndDate: formData.get('leaseEndDate'),
+    };
+
+    await Service.addTenant(tenant)
+    setShowform(false)
+    getTenant()
+  };
+
   return (
     <>
       <div className="container">
@@ -94,13 +125,13 @@ function App() {
                 tenantsList.length ? tenantsList.map((tenant, index) => {
                   const status = handlerStatus(tenant.paymentStatus.toLowerCase())
                   return (
-                    <tr datatest-id={`tenant-row${index}`} key={`tenant-key${index}`}>
+                    <tr data-testid={`tenant-row`} key={`tenant-key${index}`}>
                       <th>{tenant.id}</th>
                       <td>{tenant.name}</td>
                       <td className={status}>{tenant.paymentStatus}</td>
                       <td>{formatDate(tenant.leaseEndDate)}</td>
                       <td>
-                        <button className="btn btn-danger" >Delete</button>
+                        <button className="btn btn-danger" onClick={() => onDeleteTenants(tenant.id)}>Delete</button>
                       </td>
                     </tr>
                   )
@@ -119,29 +150,47 @@ function App() {
         </table>
       </div>
       <div className="container">
-        <button className="btn btn-secondary">Add Tenant</button>
+        <button onClick={() => setShowform(prev => !prev)} className="btn btn-secondary">Add Tenant</button>
       </div>
-      <div className="container">
-        <form>
-          <div className="form-group">
-            <label>Name</label>
-            <input className="form-control" />
-          </div>
-          <div className="form-group">
-            <label>Payment Status</label>
-            <select className="form-control">
-              <option>CURRENT</option>
-              <option>LATE</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Lease End Date</label>
-            <input className="form-control" />
-          </div>
-          <button className="btn btn-primary">Save</button>
-          <button className="btn">Cancel</button>
-        </form>
-      </div>
+      {showForm && (
+        <div className="container">
+          <form ref={formRef} onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                type="text"
+                name="name"
+                id="name"
+                className="form-control" />
+            </div>
+            <div className="form-group">
+              <label>Payment Status</label>
+              <select
+                type="text"
+                name="paymentStatus"
+                id="paymentStatus"
+                className="form-control">
+                <option>CURRENT</option>
+                <option>LATE</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Lease End Date</label>
+              <input
+                type="text"
+                name="leaseEndDate"
+                id="leaseEndDate"
+                className="form-control" />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary">Save</button>
+            <button onClick={() => onCancel()} className="btn">Cancel</button>
+          </form>
+        </div>
+      )
+      }
+
     </>
   );
 }
