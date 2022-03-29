@@ -1,0 +1,10 @@
+node_modules/
+
+/out/
+
+
+# production
+/build
+
+# debug
+npm-debug.log*
